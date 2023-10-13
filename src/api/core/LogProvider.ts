@@ -1,5 +1,4 @@
-//@ts-ignore
-import { LoggerCore } from "./LoggerCore.ts";
+import { LoggerCore } from "./LoggerCore.js";
 
 /**
  * The LogProvider provides the bare minimum that various implementations can use.
