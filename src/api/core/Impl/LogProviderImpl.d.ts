@@ -1,7 +1,7 @@
 import { LogConfig } from "../../config/LogConfig"
 import { LoggerRuntime } from "../../config/LoggerRuntime";
 
-declare class LoggerCoreImpl{
+declare class LogProvider{
     constructor(runtime: LoggerRuntime)
     export public getconfig(): LogConfig;
     export public get id():string {}
