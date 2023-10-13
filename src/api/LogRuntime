@@ -1,0 +1,8 @@
+export class LogRuntime{
+    //figure the runtime
+    //what all fields we need to send out
+    //request specific fields
+
+    id: string; //uuid
+    fields: [];
+}

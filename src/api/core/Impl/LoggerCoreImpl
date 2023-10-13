@@ -1,0 +1,153 @@
+import {LoggerCore} from "../LoggerCore";
+import {LogLevel} from "../../LogLevel";
+import {LogMessage} from "../../LogMessage";
+import { LoggerRuntime } from "../../config/LoggerRuntime";
+import { LogConfig } from "../../config/LogConfig";
+import { dateFormatter } from "../../config/DateFormatter";
+
+/**
+ * Standard logger implementation that provides the basis for all loggers.
+ */
+export class LoggerCoreImpl implements LoggerCore {
+
+  private _runtime: LoggerRuntime;
+  private _config: LogConfig;
+  private _logLevel: LogLevel;
+
+  public constructor(runtime: LoggerRuntime, config: LogConfig) {
+    this._runtime = runtime;
+  }
+
+  public get config(){
+    return this._config;
+  }
+
+  public get id() {
+    return this._runtime.id;
+  }
+
+  public get logLevel(): LogLevel {
+    return this._logLevel;
+  }
+
+  public get runtimeSettings(): LoggerRuntime {
+    return this._runtime;
+  }
+
+  public debug(message: string, ...args: unknown[]): void;  //test 
+  public debug(message: string, ...args: unknown[]): void {
+    this.logMessage(LogLevel.DEBUG, message, args);
+  }
+
+  public info(message: string, ...args: unknown[]): void;
+  public info(message: string, ...args: unknown[]): void {
+    this.logMessage(LogLevel.INFO, message, args);
+  }
+
+  public warning(message: string, ...args: unknown[]): void;
+  public warning(message: string, ...args: unknown[]): void {
+    this.logMessage(LogLevel.WARNING, message, args);
+  }
+
+  public error(message: string, ...args: unknown[]): void;
+  public error(message: string, ...args: unknown[]): void {
+    this.logMessage(LogLevel.ERROR, message, args);
+  }
+
+  private logMessage(level: LogLevel, message: string, args: unknown[]) {
+    const nowMillis = Date.now(); //format using time formatter to timestamp
+    const errorAndArgs = LoggerCoreImpl.getErrorAndArgs(args);
+
+    /*
+     * Deal with raw message here.
+     */
+    switch (this._config.channel.type) {
+      case "JsonLogChannel":
+        this.logJson(level, message, errorAndArgs, args, nowMillis)
+        return;
+      case "LogChannel":
+        this._config.channel.write(this.createLogMessage(message, level, errorAndArgs, nowMillis));
+        break;
+    }
+  }
+
+
+  private logJson(level:LogLevel, message: string, errorAndArgs:ErrorAndArgs,  args: unknown[], nowMillis:number) {
+    this._config.channel.write({
+      message,
+      exception: errorAndArgs.error,
+      timeInMillis: nowMillis,
+      level,
+      loggerName: this._runtime.name,
+    });
+  }
+
+  private formatArgValue(value: any): string {
+    try {
+      return JSON.stringify(value)
+    }
+    catch (e: unknown) {
+      return `>>ARG CONVERT FAILED: '${value !== undefined ? value.toString() : "undefined"}'<<`;
+    }
+  }
+
+
+  private createLogMessage(message: string, level: LogLevel, errorAndArgs: ErrorAndArgs, nowMillis: number): LogMessage {
+    let errorResult: string | undefined;
+    const error = errorAndArgs.error;
+    const args = errorAndArgs.args;
+    if (error) {
+      errorResult = `${error.name}: ${error.message}`;
+      if (error.stack) {
+        errorResult += `@\n${error.stack}`;
+      }
+    }
+
+    /*
+     * We need to add the date, and log names (in front of the now formatted message).
+     * Finally we also need to format any additional arguments and append after the message.
+     */
+    const dateFormatted = dateFormatter(nowMillis);
+    let levelAsStr = LogLevel[level].toUpperCase();
+    levelAsStr = "["+levelAsStr+"]";
+    const name = typeof this._runtime.name;
+    const argsFormatted = typeof args !== "undefined" && args.length > 0 ? ( (args.map(arg => this.formatArgValue(arg))).join(", ")) : "";
+    const completedMessage = dateFormatted + " " + levelAsStr + " [" + name + "] " + message + argsFormatted; //date [LEVEL] [loggername] log "args"
+
+    return {
+      message: completedMessage,
+      level: level,
+      timeInMillis: nowMillis,
+      loggerName:name,
+      exception: errorResult,
+    };
+  }
+
+  /**
+   * if the args contain any error, handle here
+  */
+  private static getErrorAndArgs(args: unknown[]): ErrorAndArgs {
+
+    if (args.length === 0) {
+      return {};
+    }
+
+    let error: Error | undefined;
+    let actualArgs: unknown[] | undefined;
+    const value0 = args[0];
+    //if the args is error
+    if (value0 instanceof Error) {
+      error = value0;
+      actualArgs = args.length > 1 ? args.slice(1) : undefined;
+
+      return {error, args: actualArgs};
+    }
+    //just return if args is not error
+    return {args};
+  }
+}
+
+interface ErrorAndArgs {
+  error?: Error;
+  args?: unknown[];
+}

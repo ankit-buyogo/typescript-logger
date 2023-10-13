@@ -1,0 +1,6 @@
+/**
+ * Identifier used by a Logger.
+ */
+export interface LogId {
+     id: string; //uuid
+}

@@ -1,0 +1,77 @@
+import {LogProvider} from "../LogProvider";
+import {LoggerCore} from "../LoggerCore";
+import {LogConfig} from "../../config/LogConfig";
+import {EnhancedMap} from "../EnhancedMap";
+import {LoggerCoreImpl} from "../Impl/LoggerCoreImpl";
+import {LogLevel} from "../../LogLevel";
+import {LoggerRuntime} from "../../config/LoggerRuntime";
+import { LogChannel } from "../LogChannel";
+import {ConsoleLogChannel} from "./ConsoleLogChannel";
+import { config } from "process";
+import { randomUUID } from "crypto";
+
+export class LogProviderImpl implements LogProvider {
+  
+  private readonly _name: string;
+  /**
+   * Default settings that were taken on creation.
+   * @private
+   */
+  private readonly _settings: LogConfig;
+  private readonly _loggers: EnhancedMap<string, LoggerCoreImpl>;
+  private readonly _idToKeyMap: EnhancedMap<string, string>;
+  private _loggerId: string
+
+  public constructor(name: string, settings: LogConfig) {
+    this._name = name;
+    this._settings = settings;
+    this._loggers = new EnhancedMap();
+    this._idToKeyMap = new EnhancedMap();
+    this._loggerId = this.nextLoggerId();
+  }
+
+  public getLogger(name: string): LoggerCore {
+    return this.getOrCreateLogger(name);
+  }
+
+  private getOrCreateLogger(name: string): LoggerCoreImpl {
+    const key = LogProviderImpl.createKey(name);
+
+    const logger = this._loggers.computeIfAbsent(key, () => {
+      const runtime: LoggerRuntime = {
+        level: this._settings.level,
+        channel: this._settings.channel,
+        id: this._loggerId,
+        name
+      };
+      return new LoggerCoreImpl(runtime);
+    });
+    this._idToKeyMap.computeIfAbsent(logger.id, () => key);
+    return logger;
+  }
+
+  private nextLoggerId(): string {
+    const result = this._name + "_" + randomUUID;
+    return result;
+  }
+
+  
+  private static createKey(name: string) {
+      return name;  //could modify to later include workerName
+    }
+}
+
+/**
+ * Creates a default LogConfig.
+ */
+function createDefaultLogConfig(name: String): LogConfig {
+  return {
+    channel: createConsoleChannel(),
+    level: LogLevel.ERROR
+  };
+}
+
+export function createConsoleChannel(): LogChannel {
+  return new ConsoleLogChannel();
+  
+}

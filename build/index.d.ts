@@ -1,0 +1,16 @@
+import { LogProvider } from "./api/core/LogProvider";
+import { LogProviderImpl } from "./api/core/Impl/LogProviderImpl";
+import { LoggerCore } from "./api/core/LoggerCore";
+import { LogConfig } from "./api/config/LogConfig";
+import { LogLevel } from "./api/LogLevel";
+export { LogChannel } from "./api/core/LogChannel";
+export { LoggerId } from "./api/LoggerId";
+export { LogMessage } from "./api/LogMessage";
+export { LoggerRuntime } from "./api/config/LoggerRuntime";
+export { LoggerCore };
+export { LoggerCoreImpl } from "./api/core/Impl/LoggerCoreImpl";
+export { LogConfig };
+export { LogProviderImpl };
+export { LogLevel };
+export { LogProvider };
+export declare function createLogProvider(name: string, settings: LogConfig): LogProvider;
